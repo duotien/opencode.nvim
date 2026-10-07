@@ -39,7 +39,7 @@ function M.pick_session()
     .get()
     :next(function(server)
       return require("opencode.ui.session").pick(server):next(function(session)
-        require("opencode.server").pinned = session
+        require("opencode.server").set_pinned(session)
         vim.notify("OpenCode: prompts now target `" .. (session.title or session.id) .. "`", vim.log.levels.INFO, {
           title = "opencode",
         })
@@ -58,7 +58,7 @@ function M.clear_session()
     return
   end
 
-  server.pinned = nil
+  server.set_pinned(nil)
   vim.notify(
     "OpenCode: unpinned `" .. (pinned.title or pinned.id) .. "` - prompts now target the most recently updated session",
     vim.log.levels.INFO,

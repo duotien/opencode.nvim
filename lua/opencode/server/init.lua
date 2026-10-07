@@ -301,7 +301,7 @@ function Server:resolve_session()
         end
       end
 
-      Server.pinned = nil
+      Server.set_pinned(nil)
       local expired = pinned
       vim.notify(
         "OpenCode: pinned session `" .. (expired.title or expired.id) .. "` is no longer available - pick a session",
@@ -309,7 +309,7 @@ function Server:resolve_session()
         { title = "opencode" }
       )
       return require("opencode.ui.session").pick(self):next(function(session)
-        Server.pinned = session
+        Server.set_pinned(session)
         return session
       end)
     end
@@ -372,8 +372,17 @@ Server.connected = nil
 ---The session this Neovim instance targets, pinned by `require("opencode").pick_session()`.
 ---Cleared when it disappears from the current directory's live session list
 ---(archived, directory change, server restart); the next prompt then forces a re-pick.
+---Always mutate via `Server.set_pinned()`.
 ---@type opencode.server.Session?
 Server.pinned = nil
+
+---Pin the session this Neovim instance targets (or unpin with `nil`), and
+---refresh the statusline so the routing change is visible.
+---@param session opencode.server.Session?
+function Server.set_pinned(session)
+  Server.pinned = session
+  require("opencode.events.status").refresh()
+end
 
 ---Subscribe to this server's SSE stream and dispatch autocmds for received events.
 ---Disconnects currently connected server first.
