@@ -242,6 +242,9 @@ opencode.nvim replaces placeholders in prompts with the corresponding context:
 
 > [!TIP]
 > OpenCode reads referenced files from disk — save your changes!
+> Buffers without a file on disk are sent as their text; a just-opened empty
+> file (e.g. netrw's `%`) is sent as a path reference so OpenCode knows where
+> to create it.
 
 ### Prompts
 

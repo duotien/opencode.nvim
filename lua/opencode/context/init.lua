@@ -241,7 +241,7 @@ function Context.format(opts)
   -- For buffers not backed by a real file, return inline text
   if opts.buf then
     local filestat = vim.uv.fs_stat(filepath)
-    if not filestat or filestat.type ~= "file" then
+    if filestat and filestat.type ~= "file" then
       return get_buffer_range_text(
         opts.buf,
         start_line or 1,
@@ -249,6 +249,20 @@ function Context.format(opts)
         end_line or vim.api.nvim_buf_line_count(opts.buf),
         end_col
       )
+    elseif not filestat then
+      -- The file doesn't exist on disk yet (e.g. a just-opened empty file).
+      -- If there's content, send it inline; otherwise fall through to the
+      -- location below so OpenCode can reference (and create) the file.
+      local text = get_buffer_range_text(
+        opts.buf,
+        start_line or 1,
+        start_col,
+        end_line or vim.api.nvim_buf_line_count(opts.buf),
+        end_col
+      )
+      if text ~= "" then
+        return text
+      end
     end
   end
 
