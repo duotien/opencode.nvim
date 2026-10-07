@@ -253,6 +253,24 @@ function Server:get_sessions()
   end)
 end
 
+---Create a new root session for Neovim's directory.
+---
+---@param opts? { title?: string }
+---@return Promise<opencode.server.Session>
+function Server:create_session(opts)
+  local Promise = require("opencode.promise")
+  opts = opts or {}
+  -- The daemon is shared across projects; scope the session to Neovim's directory.
+  local body = { location = { directory = vim.fn.getcwd() } }
+  if opts.title and opts.title ~= "" then
+    body.title = opts.title
+  end
+
+  return self:request("/api/session", "POST", body):next(function(response)
+    return Promise.resolve(response and response.data)
+  end)
+end
+
 ---Resolve the session to target for this Neovim instance.
 ---
 ---Order:
