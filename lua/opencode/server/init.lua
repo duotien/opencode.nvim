@@ -253,19 +253,50 @@ function Server:get_sessions()
   end)
 end
 
----Resolve the session to target for this Neovim instance: the most recently
----updated root session for the current directory.
+---Resolve the session to target for this Neovim instance.
 ---
----Resolved on every call; never cached. See the README for the documented ordering.
+---Order:
+---1. The pinned session (`require("opencode").pick_session()`), if it is
+---   still in this directory's live session list.
+---2. The most recently updated root session for the current directory.
+---
+---An expired pin is cleared and the picker is opened inline — a stale pin
+---silently routing prompts to the wrong session is worse than one extra
+---keypress. Resolved on every call; never cached.
 ---
 ---@return Promise<opencode.server.Session>
 function Server:resolve_session()
   local Promise = require("opencode.promise")
   return self:get_sessions():next(function(sessions)
+    local live = {}
     for _, session in ipairs(sessions) do
       if not (session.time and session.time.archived) then
-        return Promise.resolve(session)
+        table.insert(live, session)
       end
+    end
+
+    if Server.pinned then
+      for _, session in ipairs(live) do
+        if session.id == Server.pinned.id then
+          return Promise.resolve(session)
+        end
+      end
+
+      local expired = Server.pinned
+      Server.pinned = nil
+      vim.notify(
+        "OpenCode: pinned session `" .. (expired.title or expired.id) .. "` is no longer available - pick a session",
+        vim.log.levels.WARN,
+        { title = "opencode" }
+      )
+      return require("opencode.ui.session").pick(self):next(function(session)
+        Server.pinned = session
+        return session
+      end)
+    end
+
+    if #live > 0 then
+      return Promise.resolve(live[1])
     end
 
     return Promise.reject("No OpenCode session found for `" .. vim.fn.getcwd() .. "`. Start one in the TUI.")
@@ -318,6 +349,12 @@ local OPENCODE_HEARTBEAT_INTERVAL_MS = 10000
 ---Cleared when the server disposes itself, the connection errors, or the heartbeat disappears.
 ---@type opencode.server.Server?
 Server.connected = nil
+
+---The session this Neovim instance targets, pinned by `require("opencode").pick_session()`.
+---Cleared when it disappears from the current directory's live session list
+---(archived, directory change, server restart); the next prompt then forces a re-pick.
+---@type opencode.server.Session?
+Server.pinned = nil
 
 ---Subscribe to this server's SSE stream and dispatch autocmds for received events.
 ---Disconnects currently connected server first.

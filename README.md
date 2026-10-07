@@ -277,6 +277,15 @@ Input a prompt for OpenCode.
   - Press `<Tab>` to trigger built-in completion.
   - Provided by in-process LSP when using [snacks.input](https://github.com/folke/snacks.nvim/blob/main/docs/input.md).
 
+### Pick session — `require("opencode").pick_session()`
+
+Pick which OpenCode session this Neovim instance drives.
+
+- Lists the live root sessions for the current directory (title + updated age).
+- Pins the choice: subsequent prompts target the picked session.
+- An expired pin (archived, directory change, server restart) is cleared and the picker re-opens inline — prompts never silently route to a different session.
+- Without a pin, prompts target the most recently updated session for the directory.
+
 ### Select — `require("opencode").select()`
 
 Select from all opencode.nvim functionality.
@@ -287,7 +296,7 @@ Highlights and previews items when using [snacks.picker](https://github.com/folk
 
 Prompt OpenCode.
 
-Targets the most recently updated session for Neovim's directory.
+Targets the pinned session (`pick_session()`), else the most recently updated session for Neovim's directory.
 Injects configured contexts.
 Trailing "..." opens in `ask()`.
 
@@ -299,7 +308,7 @@ Wraps Prompt as an operator, supporting ranges and dot-repeat.
 
 Run a registered OpenCode [command](https://opencode.ai/v2/docs/commands/).
 
-Targets the most recently updated session for Neovim's directory.
+Targets the pinned session (`pick_session()`), else the most recently updated session for Neovim's directory.
 
 ## 👀 Events
 

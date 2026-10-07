@@ -29,6 +29,25 @@ function M.ask(default)
     :catch(on_error)
 end
 
+---Pick which OpenCode session this Neovim instance drives.
+---
+---Pins the choice: subsequent prompts target the picked session until it
+---disappears (archived, directory change, server restart), which forces a re-pick.
+---Without a pin, prompts target the most recently updated session for the directory.
+function M.pick_session()
+  require("opencode.server.discovery")
+    .get()
+    :next(function(server)
+      return require("opencode.ui.session").pick(server):next(function(session)
+        require("opencode.server").pinned = session
+        vim.notify("OpenCode: prompts now target `" .. (session.title or session.id) .. "`", vim.log.levels.INFO, {
+          title = "opencode",
+        })
+      end)
+    end)
+    :catch(on_error)
+end
+
 ---Select from all opencode.nvim functionality.
 ---
 ---Highlights and previews items when using [snacks.picker](https://github.com/folke/snacks.nvim/blob/main/docs/picker.md).
@@ -48,7 +67,7 @@ M.statusline = require("opencode.events.status").statusline
 
 ---Prompt OpenCode.
 ---
----Targets the most recently updated session for Neovim's directory.
+---Targets the pinned session (`pick_session()`), else the most recently updated session for Neovim's directory.
 ---Injects configured contexts.
 ---Trailing "..." opens in `ask()`.
 ---
