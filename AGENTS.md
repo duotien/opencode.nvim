@@ -75,3 +75,75 @@ stylua .
 ## Project vision
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for project guidelines, priorities, and maintenance philosophy. When in doubt, follow the patterns already in the codebase.
+
+<!-- epic-tasks:begin (managed by epic_bootstrap.py; updates print a diff, never rewrite) -->
+## Epic-tasks tracking rules
+
+- **Repo layout convention:** everything epic-tasks creates lives in
+  `.epic-tasks/` — capture ledger at `.epic-tasks/INBOX.md`, conventions at
+  `.epic-tasks/epics.yaml`, each epic as a dir
+  `.epic-tasks/<epic-name>/` (`epic.md` + `taskN.md`, optional
+  `design.md`), loose tasks in `.epic-tasks/backlogs/`, done epics in
+  `.epic-tasks/archived/`.
+- **Capture:** the moment the user states a request/bug/story, append ONE
+  line to `.epic-tasks/INBOX.md` (date · one line · source · status
+  `new`). Fast, lossless; triage later.
+- **Track before shipping:** no implementation before the task row/files
+  exist and the user approved them. No untracked commits.
+- **Done = gate green:** a task is done only when the `gate` command from
+  `.epic-tasks/epics.yaml` passes AND the commit hash is recorded.
+- **Tick on completion:** status + commit hash updated in the same commit as
+  the work; docs sync (`docs_sync`) in that commit too.
+- **Progression:** a task that spans a session or gets non-trivial is
+  promoted to `taskN.md` in its epic dir (story + DoD checklist + `## Work
+  log`); demotion never happens.
+- **Status view:** to report progress run
+  `python3 .opencode/skills/epic-tasks/epic_status.py <repo>` (table;
+  `--json` · `--watch` · `--html`) — don't read tracking docs to summarize.
+- **Workflow owner:** `.opencode/skills/epic-tasks/` (installed from
+  skill_factory — see `.installed-from` in that folder).
+<!-- epic-tasks:end -->
+
+<!-- epic-tasks:tmux:begin (managed by epic_bootstrap.py; updates print a diff, never rewrite) -->
+## tmux background shell convention (agent shell work)
+
+Run shell/background tasks inside a tmux session (not the harness background shell), with a
+**`opencode-` prefixed name** so they're recognisably the agent's and can't clash with the user's
+sessions (`opencode-p1`, `opencode-gate`, …). Launch the command IN THE PANE (so the user can
+`tmux attach -t opencode-<name>` and watch it live) and tee it to a log with `pipe-pane`
+(create `.tmp/` in the repo on first use):
+
+```
+tmux new -d -s opencode-<name> -c <dir>
+tmux pipe-pane -t opencode-<name> -o 'cat >> <dir>/.tmp/<name>.log'
+tmux send-keys -t opencode-<name> 'cmd; echo DONE=$?' C-m
+```
+
+The pane keeps a prompt after the command ends — completion = `DONE=<digit>` in the log (the
+typed command line also contains `DONE=$?`, so match a digit). **Never redirect the pane
+command's output to a file** (`cmd > x.out 2>&1` silences the pane, defeating attach-to-watch) —
+pipe-pane's tee IS the log; run `cmd` bare in the pane so stdout is visible to an attached user
+AND recorded in `.tmp/<name>.log`.
+
+**Efficiency pattern — separate launch from wait:**
+- Launch (tmux new + pipe-pane + send-keys) is one quick FOREGROUND call.
+- Chain dependent steps IN THE send-keys (`build && spec; echo DONE=$?`) so a logical unit emits
+  ONE `DONE` signal — one notification, no re-round-trips.
+- The completion waiter is an explicit BACKGROUND shell call, ALWAYS BOUNDED
+  (`i=0; until grep -qE 'DONE=[0-9]' log || [ $i -ge 120 ]; do sleep 10; i=$((i+1)); done;
+  grep summary || echo NO_DONE`), NOT a foreground blocking loop. Size the bound to the expected
+  gate length (e.g. 120 × 10 s for a ~3-min gate).
+- **The waiter is a convenience notification, never the source of truth:** the log is. On ANY
+  session resume with a missing/late notification, FIRST check the log
+  (`grep -E 'DONE=[0-9]' .tmp/<name>.log`) and the pane (`tmux capture-pane`) — if DONE is
+  present, the task finished; proceed. Never block on the notification.
+- While the waiter runs, do non-conflicting work (docs ticks, work logs, next task's scouting);
+  parallel independent units get parallel `opencode-` sessions — don't serialize what doesn't
+  depend.
+- Observe without attaching: `tmux capture-pane -p -t opencode-<name> | tail`.
+- Clean up: `tmux kill-session -t opencode-<name>` in the SAME call as launching the replacement
+  (keeps the tree clean, no port squatters); then self-safe `pkill` for leftovers in a SEPARATE
+  shell call, so the kill patterns can't match that call's own argv. A system reboot kills all
+  tmux sessions — the `.tmp/` log (pipe-pane tee) is the surviving record; after a reboot, check
+  the log for `DONE=<digit>` before re-running anything.
+<!-- epic-tasks:tmux:end -->

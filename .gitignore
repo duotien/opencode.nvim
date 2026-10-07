@@ -1,2 +1,7 @@
 vendor/plenary.nvim
 opencode.json
+
+# agent-produced (never push)
+.opencode/
+.epic-tasks/
+.tmp/
