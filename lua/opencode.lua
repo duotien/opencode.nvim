@@ -48,6 +48,24 @@ function M.pick_session()
     :catch(on_error)
 end
 
+---Unpin the session: prompts target the most recently updated session for
+---Neovim's directory again until a session is picked.
+function M.clear_session()
+  local server = require("opencode.server")
+  local pinned = server.pinned
+  if not pinned then
+    vim.notify("OpenCode: no session is pinned", vim.log.levels.WARN, { title = "opencode" })
+    return
+  end
+
+  server.pinned = nil
+  vim.notify(
+    "OpenCode: unpinned `" .. (pinned.title or pinned.id) .. "` - prompts now target the most recently updated session",
+    vim.log.levels.INFO,
+    { title = "opencode" }
+  )
+end
+
 ---Select from all opencode.nvim functionality.
 ---
 ---Highlights and previews items when using [snacks.picker](https://github.com/folke/snacks.nvim/blob/main/docs/picker.md).

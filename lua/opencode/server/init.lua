@@ -275,15 +275,16 @@ function Server:resolve_session()
       end
     end
 
-    if Server.pinned then
+    local pinned = Server.pinned
+    if pinned then
       for _, session in ipairs(live) do
-        if session.id == Server.pinned.id then
+        if session.id == pinned.id then
           return Promise.resolve(session)
         end
       end
 
-      local expired = Server.pinned
       Server.pinned = nil
+      local expired = pinned
       vim.notify(
         "OpenCode: pinned session `" .. (expired.title or expired.id) .. "` is no longer available - pick a session",
         vim.log.levels.WARN,
