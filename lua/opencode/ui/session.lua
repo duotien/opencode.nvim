@@ -31,6 +31,7 @@ end
 ---@return Promise<opencode.server.Session>
 function M.pick(server, opts)
   local Promise = require("opencode.promise")
+  local pinned = require("opencode.server").pinned
   return server:get_sessions():next(function(sessions)
     local items = {
       {
@@ -41,9 +42,10 @@ function M.pick(server, opts)
     }
     for _, session in ipairs(sessions) do
       if not (session.time and session.time.archived) then
+        local marker = pinned and pinned.id == session.id and "● " or ""
         table.insert(items, {
           __session = session,
-          name = session.title or session.id,
+          name = marker .. (session.title or session.id),
           text = session.time and ago(session.time.updated) or "",
         })
       end
