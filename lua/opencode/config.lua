@@ -1,6 +1,7 @@
 ---@class opencode.Opts
 ---@field server? opencode.server.Opts OpenCode server connection options.
 ---@field contexts? table<string, fun(context: opencode.context.Context): string?> Context placeholders and their builders.
+---@field context_header? boolean Prepend an always-on "buffer: <path> (line N)" line to every prompt's output so the agent targets the buffer the user is looking at.
 ---@field ask? opencode.ask.Opts Options for `ask()`. Supports [snacks.input](https://github.com/folke/snacks.nvim/blob/main/docs/input.md).
 ---@field select? opencode.select.Opts Options and items for `select()`. Supports [snacks.picker](https://github.com/folke/snacks.nvim/blob/main/docs/picker.md).
 ---@field events? opencode.events.Opts Options for handling OpenCode events.
@@ -36,6 +37,7 @@ local defaults = {
     ["@quickfix"] = require("opencode.context.builtins").quickfix,
     ["@visible"] = require("opencode.context.builtins").visible_text,
   },
+  context_header = true,
   ask = {
     prompt = "Ask OpenCode: ",
     completion = "customlist,v:lua.opencode_completion",

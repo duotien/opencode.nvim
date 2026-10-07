@@ -121,6 +121,24 @@ end
 ---Render `vim.g.opencode_opts.contexts` in `prompt`.
 ---@param prompt string
 ---@return { input: opencode.context.rendered.Rendered, output: opencode.context.rendered.Rendered }
+--- Compact always-on context line: the file the user is looking at + cursor
+--- line (+ unsaved flag). nil for no-file buffers (scratch/terminal/help).
+--- Uses nvim_get_current_buf + win_get_cursor only — NOT the '<'/'>' marks
+--- (which are frozen/stale for real keystrokes on the custom build), so it is
+--- reliable. Selection context is the nvim-mcp get_selection tool's job, not
+--- this header's.
+---@return string?
+function Context:_context_header()
+  local buf = vim.api.nvim_get_current_buf()
+  local name = vim.api.nvim_buf_get_name(buf)
+  if name == "" then
+    return nil
+  end
+  local pos = vim.api.nvim_win_get_cursor(0)
+  local modified = vim.bo[buf].modified and " [unsaved]" or ""
+  return string.format("[nvim-mcp] buffer: %s (line %d)%s\n", name, pos[1], modified)
+end
+
 function Context:render(prompt)
   local contexts = require("opencode.config").opts.contexts or {}
 
@@ -152,6 +170,18 @@ function Context:render(prompt)
   end)
 
   local input, output = {}, {}
+
+  -- Always-on buffer context (task4): tells the agent which buffer the user is
+  -- looking at, so "fix this" targets the right file. Prepended to the OUTPUT
+  -- (sent to opencode) only, not the input (shown in the nvim prompt), so it
+  -- doesn't clutter what the user types.
+  if require("opencode.config").opts.context_header then
+    local header = self:_context_header()
+    if header then
+      table.insert(output, { header, "OpencodeContextValue" })
+    end
+  end
+
   local i = 1
   while i <= #prompt do
     -- Find the next placeholder and its position
