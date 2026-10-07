@@ -19,6 +19,7 @@ For me, the best tools are the ones that "just work." opencode.nvim is designed 
 - Input prompts with completions and highlights
 - Select from built-in and custom prompts
 - Execute OpenCode commands
+- Pick, create, and pin an OpenCode session (shown in the statusline)
 - Accept/reject and reload OpenCode edits
 - Handle OpenCode events as autocmds
 - Simple, sensible, Vim-y defaults and interfaces
@@ -208,7 +209,7 @@ require("lualine").setup({
   sections = {
     lualine_z = {
       {
-        -- Show the currently connected server and its status
+        -- Show the connected server, its status, and the pinned session (lock + title)
         require("opencode").statusline,
       },
     },
@@ -277,14 +278,18 @@ Input a prompt for OpenCode.
   - Press `<Tab>` to trigger built-in completion.
   - Provided by in-process LSP when using [snacks.input](https://github.com/folke/snacks.nvim/blob/main/docs/input.md).
 
-### Pick session — `require("opencode").pick_session()`
+### Pick session — `:OpencodeSession`
 
 Pick which OpenCode session this Neovim instance drives.
 
-- Lists the live root sessions for the current directory (title + updated age).
-- Pins the choice: subsequent prompts target the picked session.
+- Lists the live root sessions for the current directory (title + updated age), with the currently pinned session marked (`●`).
+- Includes a `+ New session` entry that creates a session in the current directory (optional title).
+- Pins the choice: subsequent prompts target the picked session. The pin is shown in the statusline (lock glyph + title) and lasts until Neovim restarts.
+- `:OpencodeSession --clear` unpins, so prompts target the most recently updated session again.
 - An expired pin (archived, directory change, server restart) is cleared and the picker re-opens inline — prompts never silently route to a different session.
 - Without a pin, prompts target the most recently updated session for the directory.
+
+Also available as `require("opencode").pick_session()` and `require("opencode").clear_session()`.
 
 ### Select — `require("opencode").select()`
 
@@ -296,7 +301,7 @@ Highlights and previews items when using [snacks.picker](https://github.com/folk
 
 Prompt OpenCode.
 
-Targets the pinned session (`pick_session()`), else the most recently updated session for Neovim's directory.
+Targets the pinned session (`:OpencodeSession`), else the most recently updated session for Neovim's directory.
 Injects configured contexts.
 Trailing "..." opens in `ask()`.
 
@@ -308,7 +313,7 @@ Wraps Prompt as an operator, supporting ranges and dot-repeat.
 
 Run a registered OpenCode [command](https://opencode.ai/v2/docs/commands/).
 
-Targets the pinned session (`pick_session()`), else the most recently updated session for Neovim's directory.
+Targets the pinned session (`:OpencodeSession`), else the most recently updated session for Neovim's directory.
 
 ## 👀 Events
 

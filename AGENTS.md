@@ -6,7 +6,8 @@ A Neovim Lua plugin that bridges Neovim and the `opencode` CLI (external binary)
 
 ## Entrypoints
 
-- **Public API**: `lua/opencode.lua` — exports `ask()`, `select()`, `prompt()`, `command()`, `operator()`, `format()`, `statusline`
+- **Public API**: `lua/opencode.lua` — exports `ask()`, `select()`, `prompt()`, `command()`, `operator()`, `format()`, `statusline`, `pick_session()`, `clear_session()`
+- **User command**: `plugin/opencode.lua` registers `:OpencodeSession` (opens the session picker, pins the choice; `+ New session` entry creates one; `--clear` unpins back to follow-latest)
 - **Config**: `vim.g.opencode_opts` global (not a `setup()` call); merged with defaults from `lua/opencode/config.lua`
 - **Plugin files**: `plugin/highlights.lua` sets highlight groups; `plugin/events/` registers four autocmd groups (`OpencodeReload`, `OpencodeStatus`, `OpencodePermissions`, `OpencodeEdits`) that listen for `OpencodeEvent:*` User events to reload edited buffers, update statusline, display permission requests, and diff edit proposals
 
@@ -63,7 +64,7 @@ stylua .
 
 - **Async**: custom Promise implementation in `lua/opencode/promise/init.lua` (fork of `promise.nvim`)
 - **Server discovery flow** (`lua/opencode/server/discovery/init.lua`): connected server → configured URL → OpenCode background service registration (`service.json`, URL + password) → auto-start + poll (5s timeout)
-- **OpenCode v2 API** (`lua/opencode/server/init.lua`): the HTTP API lives under `/api/*` and requires HTTP basic auth. The password comes from the service registration or `opts.server.password`. Requests carry `x-opencode-directory: <nvim cwd>`; the daemon is shared across projects, so `/api/session` is scoped with a `directory` query. Prompts and commands target the most recently updated root session for Neovim's directory (`Server:resolve_session()`), resolved per call and never cached. OpenCode v2 has no TUI-driving or prompt-append API.
+- **OpenCode v2 API** (`lua/opencode/server/init.lua`): the HTTP API lives under `/api/*` and requires HTTP basic auth. The password comes from the service registration or `opts.server.password`. Requests carry `x-opencode-directory: <nvim cwd>`; the daemon is shared across projects, so `/api/session` is scoped with a `directory` query. Prompts and commands target the pinned session (set via `Server.set_pinned()`, the single pin mutation point — it also refreshes the statusline, which shows the pin as lock glyph + title) if one is live for Neovim's directory, else the most recently updated root session (`Server:resolve_session()`), resolved per call and never cached; an expired pin is cleared, warned, and re-picked inline. `Server:create_session()` posts to `/api/session` with `location.directory` scoping (the daemon is shared across projects). OpenCode v2 has no TUI-driving or prompt-append API.
 - **Discovery vs connection**: server.connect (default true) controls whether the discovered server is automatically subscribed to via SSE. When false, the server is found but not connected.
 - **Context system** (`lua/opencode/context/init.lua`): captures buffer/win/cursor/selection before UI opens, renders placeholders (`@this`, `@buffer`, etc.) in prompts
 - **Events**: SSE subscribed on `connect()` (`/api/event`), dispatched as `OpencodeEvent:<type>` User autocmds. OpenCode v2 events are shaped `{ id, type, data }`.
