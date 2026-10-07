@@ -22,8 +22,9 @@ end
 ---@class opencode.session.Opts : snacks.picker.ui_select.Opts
 ---@field prompt? string Prompt to display.
 
----List the live root sessions for Neovim's directory and pick one.
----Archived sessions are excluded. Rejects on cancellation or when no live session exists.
+---List the live root sessions for Neovim's directory and pick one, or create
+---a new session in the current directory.
+---Archived sessions are excluded. Rejects on cancellation.
 ---
 ---@param server opencode.server.Server
 ---@param opts? opencode.session.Opts
@@ -31,7 +32,13 @@ end
 function M.pick(server, opts)
   local Promise = require("opencode.promise")
   return server:get_sessions():next(function(sessions)
-    local items = {}
+    local items = {
+      {
+        __create = true,
+        name = "+ New session",
+        text = "create in the current directory",
+      },
+    }
     for _, session in ipairs(sessions) do
       if not (session.time and session.time.archived) then
         table.insert(items, {
@@ -40,10 +47,6 @@ function M.pick(server, opts)
           text = session.time and ago(session.time.updated) or "",
         })
       end
-    end
-
-    if #items == 0 then
-      return Promise.reject("No OpenCode session found for `" .. vim.fn.getcwd() .. "`. Start one in the TUI.")
     end
 
     ---@type snacks.picker.ui_select.Opts
@@ -59,6 +62,14 @@ function M.pick(server, opts)
     end
 
     return require("opencode.promise.ui").select(items, select_opts):next(function(choice)
+      if choice.__create then
+        return require("opencode.promise.ui")
+          .input({ prompt = "Title for the new OpenCode session (optional): " })
+          :next(function(title)
+            return server:create_session(title == "" and nil or { title = title })
+          end)
+      end
+
       return choice.__session
     end)
   end)
