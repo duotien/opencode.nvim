@@ -118,9 +118,6 @@ function Context:resume()
   end
 end
 
----Render `vim.g.opencode_opts.contexts` in `prompt`.
----@param prompt string
----@return { input: opencode.context.rendered.Rendered, output: opencode.context.rendered.Rendered }
 --- Compact always-on context line: the file the user is looking at + cursor
 --- line (+ unsaved flag). nil for no-file buffers (scratch/terminal/help).
 --- Uses nvim_get_current_buf + win_get_cursor only — NOT the '<'/'>' marks
@@ -139,6 +136,9 @@ function Context:_context_header()
   return string.format("[nvim-mcp] buffer: %s (line %d)%s\n", name, pos[1], modified)
 end
 
+---Render `vim.g.opencode_opts.contexts` in `prompt`.
+---@param prompt string
+---@return { input: opencode.context.rendered.Rendered, output: opencode.context.rendered.Rendered }
 function Context:render(prompt)
   local contexts = require("opencode.config").opts.contexts or {}
 
